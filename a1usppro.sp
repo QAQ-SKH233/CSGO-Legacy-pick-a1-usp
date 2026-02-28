@@ -60,26 +60,38 @@ stock void CreateDatabase()
 stock void GetClientWeaponBool(int client)
 {
 	DBResultSet hQuery = null;
-	char		Query[128], SteamAuth[32], tmp_geta1bool[1024], tmp_getuspbool[1024];
+	char		Query[128], SteamAuth[32], tmp_bool[16];
 	GetClientAuthId(client, AuthId_Steam2, SteamAuth, sizeof(SteamAuth));
 
-	Format(Query, sizeof(Query), "SELECT `weapon_a1`, `weapon_usp`, `weapon_r8`, `weapon_cz`, `weapon_mp5` FROM buyweaponset WHERE id LIKE '%s'", SteamAuth);
+	Format(Query, sizeof(Query), "SELECT `weapon_a1`, `weapon_usp`, `weapon_r8`, `weapon_cz`, `weapon_mp5` FROM buyweaponset WHERE id = '%s'", SteamAuth);
 	hQuery = SQL_Query(db, Query);
 
 	if (hQuery == null || !SQL_FetchRow(hQuery))
 	{
 		PrintToServer("[niubi] Could not execute the query.");
-		BuyUsp[client] = true;
 		BuyA1[client]  = false;
+		BuyUsp[client] = true;
+		BuyR8[client]  = false;
+		BuyCz[client]  = false;
+		BuyMp5[client] = false;
 		UpdateClientWeaponBool(client);
 	}
 	else
 	{
-		SQL_FetchString(hQuery, 0, tmp_geta1bool, sizeof tmp_geta1bool);
-		SQL_FetchString(hQuery, 1, tmp_getuspbool, sizeof tmp_getuspbool);
+		SQL_FetchString(hQuery, 0, tmp_bool, sizeof tmp_bool);
+		BuyA1[client] = view_as<bool>(StringToInt(tmp_bool));
 
-		BuyA1[client]  = view_as<bool>(StringToInt(tmp_geta1bool));
-		BuyUsp[client] = view_as<bool>(StringToInt(tmp_getuspbool));
+		SQL_FetchString(hQuery, 1, tmp_bool, sizeof tmp_bool);
+		BuyUsp[client] = view_as<bool>(StringToInt(tmp_bool));
+
+		SQL_FetchString(hQuery, 2, tmp_bool, sizeof tmp_bool);
+		BuyR8[client] = view_as<bool>(StringToInt(tmp_bool));
+
+		SQL_FetchString(hQuery, 3, tmp_bool, sizeof tmp_bool);
+		BuyCz[client] = view_as<bool>(StringToInt(tmp_bool));
+
+		SQL_FetchString(hQuery, 4, tmp_bool, sizeof tmp_bool);
+		BuyMp5[client] = view_as<bool>(StringToInt(tmp_bool));
 	}
 
 	delete hQuery;
@@ -111,6 +123,15 @@ public void OnClientPostAdminCheck(int client)
 	{
 		GetClientWeaponBool(client);
 	}
+}
+
+public void OnClientDisconnect(int client)
+{
+	BuyA1[client]  = false;
+	BuyUsp[client] = false;
+	BuyR8[client]  = false;
+	BuyCz[client]  = false;
+	BuyMp5[client] = false;
 }
 
 public Action Command_ChangeBuyMenu(int client, int args)
@@ -212,10 +233,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "m4a1_silencer") == 0 && !BuyA1[client])
+		else if (strcmp(szWeapon, "m4a1_silencer") == 0 && !BuyA1[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_M4A1))
 			{
@@ -226,10 +247,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "hkp2000") == 0 && BuyUsp[client])
+		else if (strcmp(szWeapon, "hkp2000") == 0 && BuyUsp[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_USP_SILENCER))
 			{
@@ -240,10 +261,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "usp_silencer") == 0 && !BuyUsp[client])
+		else if (strcmp(szWeapon, "usp_silencer") == 0 && !BuyUsp[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_HKP2000))
 			{
@@ -254,10 +275,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "fiveseven") == 0 && BuyCz[client])
+		else if (strcmp(szWeapon, "fiveseven") == 0 && BuyCz[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_CZ75A))
 			{
@@ -268,24 +289,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "cz75a") == 0 && !BuyCz[client])
-		{
-			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_FIVESEVEN))
-			{
-				CSGO_SetMoney(client, iAccount - CS_GetWeaponPrice(client, CSWeapon_FIVESEVEN));
-				CSGO_ReplaceWeapon(client, CS_SLOT_SECONDARY, "weapon_fiveseven");
-				return Plugin_Changed;
-			}
-			else
-			{
-				PrintHintText(client, "买啥呢老弟");
-			}
-		}
-
-		if (strcmp(szWeapon, "tec9") == 0 && BuyCz[client])
+		else if (strcmp(szWeapon, "tec9") == 0 && BuyCz[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_CZ75A))
 			{
@@ -296,24 +303,42 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "cz75a") == 0 && !BuyCz[client])
+		else if (strcmp(szWeapon, "cz75a") == 0 && !BuyCz[client])
 		{
-			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_TEC9))
+			int iTeam = GetClientTeam(client);
+			if (iTeam == CS_TEAM_CT)
 			{
-				CSGO_SetMoney(client, iAccount - CS_GetWeaponPrice(client, CSWeapon_TEC9));
-				CSGO_ReplaceWeapon(client, CS_SLOT_SECONDARY, "weapon_tec9");
-				return Plugin_Changed;
+				if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_FIVESEVEN))
+				{
+					CSGO_SetMoney(client, iAccount - CS_GetWeaponPrice(client, CSWeapon_FIVESEVEN));
+					CSGO_ReplaceWeapon(client, CS_SLOT_SECONDARY, "weapon_fiveseven");
+					return Plugin_Changed;
+				}
+				else
+				{
+					PrintHintText(client, "买啥呢老弟");
+					return Plugin_Handled;
+				}
 			}
-			else
+			else if (iTeam == CS_TEAM_T)
 			{
-				PrintHintText(client, "买啥呢老弟");
+				if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_TEC9))
+				{
+					CSGO_SetMoney(client, iAccount - CS_GetWeaponPrice(client, CSWeapon_TEC9));
+					CSGO_ReplaceWeapon(client, CS_SLOT_SECONDARY, "weapon_tec9");
+					return Plugin_Changed;
+				}
+				else
+				{
+					PrintHintText(client, "买啥呢老弟");
+					return Plugin_Handled;
+				}
 			}
 		}
-
-		if (strcmp(szWeapon, "deagle") == 0 && BuyR8[client])
+		else if (strcmp(szWeapon, "deagle") == 0 && BuyR8[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_REVOLVER))
 			{
@@ -324,10 +349,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "revolver") == 0 && !BuyR8[client])
+		else if (strcmp(szWeapon, "revolver") == 0 && !BuyR8[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_DEAGLE))
 			{
@@ -338,10 +363,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "mp7") == 0 && BuyMp5[client])
+		else if (strcmp(szWeapon, "mp7") == 0 && BuyMp5[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_MP5NAVY))
 			{
@@ -352,10 +377,10 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
-
-		if (strcmp(szWeapon, "mp5sd") == 0 && !BuyMp5[client])
+		else if (strcmp(szWeapon, "mp5sd") == 0 && !BuyMp5[client])
 		{
 			if (iAccount >= CS_GetWeaponPrice(client, CSWeapon_MP7))
 			{
@@ -366,6 +391,7 @@ public Action CS_OnBuyCommand(int client, const char[] szWeapon)
 			else
 			{
 				PrintHintText(client, "买啥呢老弟");
+				return Plugin_Handled;
 			}
 		}
 	}
@@ -412,22 +438,22 @@ public int MenuHandler_ChangeBuyWeaponMenu(Menu WeaponMenu, MenuAction action, i
 					BuyUsp[client] = !BuyUsp[client];
 					PrintToChat(client, "%s %s！", TAG, BuyUsp[client] ? "购买枪械时将切换P2000为USP" : "购买时将为P2000");
 				}
-				if (StrEqual(items, "a1"))
+				else if (StrEqual(items, "a1"))
 				{
 					BuyA1[client] = !BuyA1[client];
 					PrintToChat(client, "%s %s！", TAG, BuyA1[client] ? "购买枪械时将切换A4为A1" : "购买时将为A4");
 				}
-				if (StrEqual(items, "cz"))
+				else if (StrEqual(items, "cz"))
 				{
 					BuyCz[client] = !BuyCz[client];
 					PrintToChat(client, "%s %s！", TAG, BuyCz[client] ? "购买枪械时将切换57/tec9为cz" : "购买时将为57/tec9");
 				}
-				if (StrEqual(items, "r8"))
+				else if (StrEqual(items, "r8"))
 				{
 					BuyR8[client] = !BuyR8[client];
 					PrintToChat(client, "%s %s！", TAG, BuyR8[client] ? "购买枪械时将切换deagle为r8" : "购买时将为deagle");
 				}
-				if (StrEqual(items, "mp5"))
+				else if (StrEqual(items, "mp5"))
 				{
 					BuyMp5[client] = !BuyMp5[client];
 					PrintToChat(client, "%s %s！", TAG, BuyMp5[client] ? "购买枪械时将切换mp7为mp5" : "购买时将为mp7");
