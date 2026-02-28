@@ -60,10 +60,11 @@ stock void CreateDatabase()
 stock void GetClientWeaponBool(int client)
 {
 	DBResultSet hQuery = null;
-	char		Query[128], SteamAuth[32], tmp_bool[16];
+	char		Query[256], SteamAuth[32], EscapedAuth[65], tmp_bool[16];
 	GetClientAuthId(client, AuthId_Steam2, SteamAuth, sizeof(SteamAuth));
+	db.Escape(SteamAuth, EscapedAuth, sizeof(EscapedAuth));
 
-	Format(Query, sizeof(Query), "SELECT `weapon_a1`, `weapon_usp`, `weapon_r8`, `weapon_cz`, `weapon_mp5` FROM buyweaponset WHERE id = '%s'", SteamAuth);
+	Format(Query, sizeof(Query), "SELECT `weapon_a1`, `weapon_usp`, `weapon_r8`, `weapon_cz`, `weapon_mp5` FROM buyweaponset WHERE id = '%s'", EscapedAuth);
 	hQuery = SQL_Query(db, Query);
 
 	if (hQuery == null || !SQL_FetchRow(hQuery))
@@ -99,7 +100,7 @@ stock void GetClientWeaponBool(int client)
 
 stock bool UpdateClientWeaponBool(int client)
 {
-	char err[255], SteamAuth[32];
+	char err[255], SteamAuth[32], EscapedAuth[65];
 	GetClientAuthId(client, AuthId_Steam2, SteamAuth, sizeof(SteamAuth));
 	if (db == null)
 	{
@@ -108,8 +109,9 @@ stock bool UpdateClientWeaponBool(int client)
 	}
 	else
 	{
+		db.Escape(SteamAuth, EscapedAuth, sizeof(EscapedAuth));
 		char Query[2048];
-		Format(Query, sizeof(Query), "REPLACE INTO `buyweaponset` (id, weapon_a1, weapon_usp, weapon_r8, weapon_cz, weapon_mp5) VALUES ('%s', '%i', '%i', '%i', '%i', '%i')", SteamAuth, view_as<int>(BuyA1[client]), view_as<int>(BuyUsp[client]), view_as<int>(BuyR8[client]), view_as<int>(BuyCz[client]), view_as<int>(BuyMp5[client]));
+		Format(Query, sizeof(Query), "REPLACE INTO `buyweaponset` (id, weapon_a1, weapon_usp, weapon_r8, weapon_cz, weapon_mp5) VALUES ('%s', '%i', '%i', '%i', '%i', '%i')", EscapedAuth, view_as<int>(BuyA1[client]), view_as<int>(BuyUsp[client]), view_as<int>(BuyR8[client]), view_as<int>(BuyCz[client]), view_as<int>(BuyMp5[client]));
 		if (SQL_FastQuery(db, Query))
 			return true;
 		else
