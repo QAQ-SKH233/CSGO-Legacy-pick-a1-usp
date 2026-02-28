@@ -1,0 +1,46 @@
+name: Compile and Release
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  SM_VERSION: "1.11"
+  SM_BUILD: "1.11.0-git6942"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download SourceMod compiler
+        run: |
+          wget -q "https://sm.alliedmods.net/smdrop/${{ env.SM_VERSION }}/sourcemod-${{ env.SM_BUILD }}-linux.tar.gz" -O sourcemod.tar.gz
+          tar -xzf sourcemod.tar.gz
+
+      - name: Compile plugin
+        run: |
+          set -e
+          addons/sourcemod/scripting/spcomp a1usppro.sp -o a1usppro.smx
+          echo "Compilation successful: a1usppro.smx"
+
+      - name: Upload compiled plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: a1usppro
+          path: a1usppro.smx
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: a1usppro.smx
+          generate_release_notes: true
